@@ -1,0 +1,6 @@
+{
+  "name": "Biblioteca Interna de Processos",
+  "description": "Plataforma corporativa de gestão de tutoriais, processos operacionais, assistente inteligente e visualização em modo TV.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

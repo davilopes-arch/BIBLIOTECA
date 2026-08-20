@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Category containing shelves and tutorials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "descricao": { "type": "string" },
+        "icone": { "type": "string" },
+        "cor": { "type": "string" },
+        "ordem": { "type": "number" },
+        "departamento": { "type": "string" },
+        "tutoriais": { "type": "array" }
+      },
+      "required": ["id", "nome", "tutoriais"]
+    },
+    "UserPreference": {
+      "title": "UserPreference",
+      "description": "User favorites, completions and settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "favorites": { "type": "array" },
+        "completedTutorials": { "type": "array" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Tutorial helpfulness rating",
+      "type": "object",
+      "properties": {
+        "tutorialId": { "type": "string" },
+        "helpful": { "type": "number" },
+        "unhelpful": { "type": "number" }
+      },
+      "required": ["tutorialId"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Knowledge base categories and tutorial items"
+    },
+    "/user_preferences/{userId}": {
+      "schema": "UserPreference",
+      "description": "Per-user favorites and completed tutorial progress"
+    },
+    "/feedbacks/{tutorialId}": {
+      "schema": "Feedback",
+      "description": "Aggregated feedback votes per tutorial"
+    }
+  }
+}

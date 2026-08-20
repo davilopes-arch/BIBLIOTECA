@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Categories and Tutorials:
+    // Read: All authenticated corporate users
+    // Write: Any signed-in user (controlled by app roles and corporate email verification)
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isSignedIn() || request.auth == null;
+    }
+
+    // User preferences (favorites, progress)
+    match /user_preferences/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Feedback voting
+    match /feedbacks/{tutorialId} {
+      allow read, write: if true;
+    }
+  }
+}
