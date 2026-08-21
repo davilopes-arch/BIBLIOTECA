@@ -10,7 +10,9 @@ import {
   AlertTriangle,
   GraduationCap,
   BarChart3,
-  FileDown
+  FileDown,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Category, SearchFilters, UserSession } from '../types';
 import { isSuperAdmin, canUserCreateTutorial } from '../utils/permissions';
@@ -22,6 +24,8 @@ interface NavbarProps {
   user: UserSession;
   isAdmin: boolean;
   isEditMode: boolean;
+  isDark: boolean;
+  onToggleTheme: () => void;
   onOpenNewCategoryModal: () => void;
   onOpenNewTutorialModal: () => void;
   onOpenAssistant: () => void;
@@ -39,6 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   isAdmin,
   isEditMode,
+  isDark,
+  onToggleTheme,
   onOpenNewCategoryModal,
   onOpenNewTutorialModal,
   onOpenAssistant,
@@ -140,6 +146,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Sparkles className="w-3.5 h-3.5 animate-pulse text-orange-600 dark:text-orange-400" />
             <span>Tirar Dúvida com IA</span>
+          </button>
+
+          {/* Theme Toggle (Dark / Light) */}
+          <button
+            onClick={onToggleTheme}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer shadow-xs"
+            title={isDark ? 'Alternar para Modo Claro' : 'Alternar para Modo Escuro'}
+            aria-label="Alternar tema"
+          >
+            {isDark ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Claro</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-neutral-500" />
+                <span className="hidden sm:inline">Escuro</span>
+              </>
+            )}
           </button>
 
           {/* Create Category (Super Admin) & Tutorial (Admin or Area Editor) */}

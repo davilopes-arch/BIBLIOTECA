@@ -15,7 +15,6 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   const shortcuts = [
     { key: '/', description: 'Focar na barra de busca de tutoriais' },
     { key: 'Ctrl + K', description: 'Abrir Assistente de Processos com IA' },
-    { key: 'T', description: 'Alternar Modo TV / Painel Limpo' },
     { key: 'E', description: 'Alternar Modo de Edição (para Administradores)' },
     { key: 'Esc', description: 'Fechar qualquer modal ou visualizador ativo' },
     { key: '?', description: 'Abrir esta tela de atalhos de teclado' }

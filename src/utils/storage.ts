@@ -262,6 +262,23 @@ export function saveTutorialVote(tutorialId: string, isHelpful: boolean) {
   }
 }
 
+export function resetTutorialViews(categories: Category[]): Category[] {
+  return categories.map(cat => ({
+    ...cat,
+    tutoriais: cat.tutoriais.map(tut => ({
+      ...tut,
+      visualizacoes: 0
+    }))
+  }));
+}
+
+export function clearAccessHistory() {
+  try {
+    localStorage.removeItem(LOCAL_VIEWED_KEY);
+    localStorage.removeItem(LOCAL_FEEDBACK_KEY);
+  } catch (e) {}
+}
+
 export function generateId(prefix: string = 'id'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -269,3 +286,4 @@ export function generateId(prefix: string = 'id'): string {
 export function getOnboardingTracks() {
   return DEFAULT_ONBOARDING_TRACKS;
 }
+

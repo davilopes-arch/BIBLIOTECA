@@ -11,26 +11,35 @@ import {
   Download, 
   CheckCircle2, 
   FileText,
-  UserCheck
+  UserCheck,
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
-import { Category, Tutorial } from '../types';
+import { Category, Tutorial, UserSession } from '../types';
 import { getTutorialFeedbacks, getCompletedTutorials } from '../utils/storage';
+import { isSuperAdmin } from '../utils/permissions';
 
 interface AnalyticsModalProps {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
+  user?: UserSession | null;
   onSelectTutorial: (cat: Category, tut: Tutorial) => void;
+  onResetAccessHistory?: () => void;
 }
 
 export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   isOpen,
   onClose,
   categories,
-  onSelectTutorial
+  user,
+  onSelectTutorial,
+  onResetAccessHistory
 }) => {
   const feedbacks = React.useMemo(() => getTutorialFeedbacks(), [isOpen]);
   const completedIds = React.useMemo(() => getCompletedTutorials(), [isOpen]);
+  const [confirmReset, setConfirmReset] = React.useState(false);
+
 
   // Aggregate stats
   const stats = React.useMemo(() => {
@@ -251,7 +260,41 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 flex justify-end">
+        <div className="px-6 py-3.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 flex items-center justify-between">
+          <div>
+            {isSuperAdmin(user) && onResetAccessHistory && (
+              confirmReset ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-red-600 font-semibold">Confirmar zerar histórico?</span>
+                  <button
+                    onClick={() => {
+                      onResetAccessHistory();
+                      setConfirmReset(false);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    Sim, Zerar
+                  </button>
+                  <button
+                    onClick={() => setConfirmReset(false)}
+                    className="px-2.5 py-1.5 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmReset(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-semibold transition-colors cursor-pointer"
+                  title="Zera os contadores de visualizações de todos os procedimentos"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Limpar Histórico de Acessos</span>
+                </button>
+              )
+            )}
+          </div>
+
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-semibold text-xs hover:bg-neutral-800 transition-colors cursor-pointer"

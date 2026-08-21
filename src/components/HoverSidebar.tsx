@@ -4,7 +4,6 @@ import {
   Sun, 
   Moon, 
   Settings2, 
-  Tv, 
   Download, 
   Upload, 
   LogOut, 
@@ -32,8 +31,8 @@ interface HoverSidebarProps {
   isAdmin: boolean;
   isEditMode: boolean;
   onToggleEditMode: () => void;
-  isTvMode: boolean;
-  onToggleTvMode: () => void;
+  isTvMode?: boolean;
+  onToggleTvMode?: () => void;
   onExportBackup: () => void;
   onImportBackup: () => void;
   user: UserSession;
@@ -54,8 +53,6 @@ export const HoverSidebar: React.FC<HoverSidebarProps> = ({
   isAdmin,
   isEditMode,
   onToggleEditMode,
-  isTvMode,
-  onToggleTvMode,
   onExportBackup,
   onImportBackup,
   user,
@@ -219,20 +216,6 @@ export const HoverSidebar: React.FC<HoverSidebarProps> = ({
           {isDark ? <Sun className="w-4 h-4 shrink-0 text-amber-400" /> : <Moon className="w-4 h-4 shrink-0 text-neutral-400" />}
           <span className="whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity">
             {isDark ? 'Tema Claro' : 'Tema Escuro'}
-          </span>
-        </button>
-
-        {/* TV Mode */}
-        <button
-          onClick={onToggleTvMode}
-          className={`w-full h-9 rounded-lg flex items-center px-2.5 gap-3 text-[13px] transition-colors cursor-pointer ${
-            isTvMode ? 'bg-orange-500/20 text-orange-400' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
-          }`}
-          title="Modo TV / Painel Limpo"
-        >
-          <Tv className="w-4 h-4 shrink-0" />
-          <span className="whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity">
-            Modo TV
           </span>
         </button>
 

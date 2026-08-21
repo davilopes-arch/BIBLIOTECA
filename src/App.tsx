@@ -8,7 +8,11 @@ import {
   LOCAL_THEME_KEY, 
   LOCAL_USER_KEY,
   generateId,
-  getOnboardingTracks
+  getOnboardingTracks,
+  resetTutorialViews,
+  clearAccessHistory,
+  saveLocalCategories,
+  syncCategoriesToFirestore
 } from './utils/storage';
 import { HoverSidebar } from './components/HoverSidebar';
 import { Navbar } from './components/Navbar';
@@ -25,7 +29,7 @@ import { LoginCard } from './components/LoginCard';
 import { AnalyticsModal } from './components/AnalyticsModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { ExportManualModal } from './components/ExportManualModal';
-import { Sparkles, Inbox } from 'lucide-react';
+import { Sparkles, Inbox, FolderTree } from 'lucide-react';
 import { 
   isSuperAdmin, 
   isAreaEditor, 
@@ -111,7 +115,18 @@ export default function App() {
   React.useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const { categories: fetched, version } = await fetchCategoriesFromRemote();
+      let { categories: fetched, version } = await fetchCategoriesFromRemote();
+
+      // Ensure all initial/legacy access view counts start from 0 for fresh tracking
+      const RESET_FLAG_KEY = 'souenergy_access_history_reset_2026';
+      if (!localStorage.getItem(RESET_FLAG_KEY)) {
+        fetched = resetTutorialViews(fetched);
+        clearAccessHistory();
+        localStorage.setItem(RESET_FLAG_KEY, 'true');
+        saveLocalCategories(fetched);
+        syncCategoriesToFirestore(fetched).catch(() => {});
+      }
+
       setCategories(fetched);
       setDataVersion(version);
       setFavorites(getFavorites());
@@ -163,9 +178,6 @@ export default function App() {
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsAssistantOpen(prev => !prev);
-      } else if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        setIsTvMode(prev => !prev);
       } else if (e.key.toLowerCase() === 'e' && (isSuperAdmin(user) || isAreaEditor(user)) && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         setIsEditMode(prev => !prev);
@@ -423,11 +435,21 @@ export default function App() {
     });
   };
 
-  // Open Tutorial detail and increment view count
+  // Open Tutorial detail and increment view count (excluding super admin / davi.lopes@souenergy.com.br from views counting)
   const handleOpenTutorialDetail = async (category: Category, tutorial: Tutorial) => {
     setActiveTutorial({ category, tutorial });
 
-    // Increment views counter in background
+    // Do NOT increment access count if the user is super admin or davi.lopes@souenergy.com.br
+    const isExcludedAdmin = isSuperAdmin(user) || 
+      (user?.email && user.email.toLowerCase().trim() === 'davi.lopes@souenergy.com.br') ||
+      user?.role === 'admin' ||
+      user?.isAdmin === true;
+
+    if (isExcludedAdmin) {
+      return;
+    }
+
+    // Increment views counter in background for regular collaborators and viewers
     const updatedCategories = categories.map(c => {
       if (c.id === category.id) {
         return {
@@ -446,6 +468,17 @@ export default function App() {
     saveCategoriesToRemote(updatedCategories, dataVersion, user?.email).then(res => {
       if (res.newVersion) setDataVersion(res.newVersion);
     });
+  };
+
+  // Reset / Clear access history
+  const handleResetAccessHistory = async () => {
+    const cleared = resetTutorialViews(categories);
+    setCategories(cleared);
+    clearAccessHistory();
+    await saveCategoriesToRemote(cleared, dataVersion, user?.email).then(res => {
+      if (res.newVersion) setDataVersion(res.newVersion);
+    });
+    showToast('Histórico de acessos e visualizações zerado com sucesso.');
   };
 
   // Backup JSON Export & Import
@@ -621,8 +654,6 @@ export default function App() {
         isAdmin={user.isAdmin}
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
-        isTvMode={isTvMode}
-        onToggleTvMode={() => setIsTvMode(true)}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
         user={user}
@@ -644,6 +675,8 @@ export default function App() {
           user={user}
           isAdmin={user.isAdmin}
           isEditMode={isEditMode}
+          isDark={isDark}
+          onToggleTheme={() => setIsDark(!isDark)}
           onOpenNewCategoryModal={() => setCategoryModal({ isOpen: true })}
           onOpenNewTutorialModal={() => setTutorialModal({ isOpen: true })}
           onOpenAssistant={() => setIsAssistantOpen(true)}
@@ -663,12 +696,27 @@ export default function App() {
           />
         )}
 
-        {/* Categories Shelves */}
+        {/* Categories Shelves - Only show when selected from sidebar or filtered */}
         <div className="space-y-4 pt-1">
           {isLoading ? (
             <div className="py-20 text-center space-y-3">
               <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-xs text-neutral-500 font-medium">Carregando procedimentos da Sou Energy...</p>
+            </div>
+          ) : filters.selectedCategoryIds.length === 0 && !filters.query && !filters.onlyFavorites && !filters.onlyObsolete && !filters.selectedTag && !filters.selectedSubcategory ? (
+            /* Prompt state when no category is selected yet */
+            <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 space-y-4 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 text-orange-500 flex items-center justify-center mx-auto border border-orange-500/20">
+                <FolderTree className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
+                  Selecione uma categoria na barra lateral
+                </p>
+                <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                  Passe o mouse sobre a barra lateral esquerda e clique no departamento ou categoria desejada para visualizar seus procedimentos.
+                </p>
+              </div>
             </div>
           ) : filteredCategories.length === 0 ? (
             <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 space-y-2">
@@ -677,7 +725,7 @@ export default function App() {
                 Nenhum procedimento encontrado
               </p>
               <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                Tente buscar com outros termos ou limpe os filtros ativos.
+                Tente buscar com outros termos ou selecione outra categoria na barra lateral.
               </p>
             </div>
           ) : (
@@ -805,12 +853,14 @@ export default function App() {
       {/* Operational Analytics & Feedback Modal */}
       <AnalyticsModal
         categories={categories}
+        user={user}
         isOpen={isAnalyticsOpen}
         onClose={() => setIsAnalyticsOpen(false)}
         onSelectTutorial={(cat, tut) => {
           setIsAnalyticsOpen(false);
           handleOpenTutorialDetail(cat, tut);
         }}
+        onResetAccessHistory={handleResetAccessHistory}
       />
 
       {/* Export Department Manual PDF Modal */}
