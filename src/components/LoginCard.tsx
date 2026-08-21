@@ -2,7 +2,6 @@ import React from 'react';
 import { Lock, AlertCircle } from 'lucide-react';
 import { 
   SOU_ENERGY_ICON, 
-  SOU_ENERGY_LOGO_FULL, 
   ALLOWED_CORPORATE_DOMAIN,
   SUPER_ADMIN_EMAILS
 } from '../constants/assets';
@@ -130,15 +129,21 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
         {/* Accent Top Line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500" />
 
-        {/* Brand Logos */}
-        <div className="space-y-3 pt-2">
-          <div className="flex justify-center items-center gap-2">
-            <img src={SOU_ENERGY_ICON} alt="Sou Energy" className="h-10 w-10 object-contain" />
-            <img src={SOU_ENERGY_LOGO_FULL} alt="Sou Energy" className="h-8 w-auto object-contain" />
+        {/* Brand Logo & Name */}
+        <div className="space-y-3 pt-2 flex flex-col items-center">
+          <div className="w-14 h-14 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 p-2.5 flex items-center justify-center border border-orange-500/20 shadow-xs">
+            <img 
+              src={SOU_ENERGY_ICON} 
+              alt="Logo Sou Energy" 
+              className="w-full h-full object-contain" 
+            />
           </div>
 
           <div className="space-y-1">
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight">
+            <h1 className="text-xl font-extrabold tracking-widest text-neutral-900 dark:text-white uppercase">
+              SOU ENERGY
+            </h1>
+            <h2 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
               Base de Conhecimento
             </h2>
           </div>

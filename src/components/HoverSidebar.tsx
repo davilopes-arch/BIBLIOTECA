@@ -20,7 +20,7 @@ import {
   Shield
 } from 'lucide-react';
 import { Category, UserSession } from '../types';
-import { SOU_ENERGY_ICON, SOU_ENERGY_LOGO_FULL } from '../constants/assets';
+import { SOU_ENERGY_ICON } from '../constants/assets';
 import { isSuperAdmin, isAreaEditor, getRoleDisplayName } from '../utils/permissions';
 
 interface HoverSidebarProps {
@@ -80,17 +80,15 @@ export const HoverSidebar: React.FC<HoverSidebarProps> = ({
       aria-label="Menu lateral de navegação"
     >
       {/* Top Logo */}
-      <div className="relative w-full h-10 px-3 flex items-center shrink-0 mb-3 overflow-hidden">
+      <div className="w-full h-10 px-3 flex items-center shrink-0 mb-3 overflow-hidden gap-2.5">
         <img
           src={SOU_ENERGY_ICON}
           alt="Sou Energy"
-          className="w-6 h-6 object-contain group-hover/sidebar:opacity-0 transition-opacity duration-150"
+          className="w-6 h-6 object-contain shrink-0"
         />
-        <img
-          src={SOU_ENERGY_LOGO_FULL}
-          alt="Sou Energy Logo"
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-6 w-auto object-contain opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150"
-        />
+        <span className="font-extrabold text-xs tracking-wider text-white whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150 uppercase">
+          SOU ENERGY
+        </span>
       </div>
 
       {/* Main Navigation */}
