@@ -1,137 +1,95 @@
 import React from 'react';
-import { Lock, AlertCircle } from 'lucide-react';
+import { AlertCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import { 
   SOU_ENERGY_ICON, 
   ALLOWED_CORPORATE_DOMAIN,
   SUPER_ADMIN_EMAILS
 } from '../constants/assets';
 import { UserSession } from '../types';
+import { auth, googleProvider } from '../lib/firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 interface LoginCardProps {
   onLogin: (session: UserSession) => void;
 }
 
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
-
 export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const googleBtnRef = React.useRef<HTMLDivElement>(null);
-  const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
 
-  // Decode JWT payload from Google ID Token
-  const decodeJwt = (token: string) => {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch {
-      return null;
-    }
-  };
-
-  const handleGoogleSuccess = (googleUser: { email: string; name?: string; picture?: string }) => {
-    setError(null);
-    const cleanEmail = (googleUser.email || '').trim().toLowerCase();
-
-    // Verify corporate domain
-    if (!cleanEmail.endsWith(`@${ALLOWED_CORPORATE_DOMAIN}`)) {
-      setError(
-        `Acesso Negado: O e-mail "${cleanEmail}" não pertence ao domínio corporativo @${ALLOWED_CORPORATE_DOMAIN}. Utilize sua conta corporativa Sou Energy.`
-      );
-      setIsLoading(false);
-      return;
-    }
-
-    const isMasterAdmin = SUPER_ADMIN_EMAILS.some(adm => adm.toLowerCase() === cleanEmail);
-
-    let formattedName = googleUser.name || '';
-    if (!formattedName) {
-      const namePart = cleanEmail.split('@')[0];
-      formattedName = namePart
-        .split('.')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-    }
-
-    const session: UserSession = {
-      email: cleanEmail,
-      name: formattedName,
-      role: isMasterAdmin ? 'admin' : 'colaborador',
-      isAdmin: isMasterAdmin,
-      avatar: googleUser.picture || formattedName.charAt(0) || 'U',
-      department: isMasterAdmin ? 'Administração Geral & TI' : 'Geral',
-      loginTime: new Date().toISOString()
-    };
-
-    onLogin(session);
-  };
-
-  React.useEffect(() => {
-    if (clientId && window.google?.accounts?.id && googleBtnRef.current) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response: { credential?: string }) => {
-            if (response.credential) {
-              const payload = decodeJwt(response.credential);
-              if (payload && payload.email) {
-                handleGoogleSuccess({
-                  email: payload.email,
-                  name: payload.name,
-                  picture: payload.picture
-                });
-              }
-            }
-          },
-          hosted_domain: ALLOWED_CORPORATE_DOMAIN
-        });
-
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          shape: 'pill',
-          width: 320
-        });
-      } catch (err) {
-        console.warn('Google GSI notice:', err);
-      }
-    }
-  }, [clientId]);
-
-  const handleGoogleClick = () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      handleGoogleSuccess({
-        email: 'davi.lopes@souenergy.com.br',
-        name: 'Davi Lopes'
+    try {
+      // Ensure Google prompts to pick account
+      googleProvider.setCustomParameters({
+        prompt: 'select_account',
+        hd: ALLOWED_CORPORATE_DOMAIN
       });
-    }, 450);
+
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const email = (user.email || '').trim().toLowerCase();
+
+      if (!email) {
+        throw new Error('Não foi possível obter o e-mail da conta Google selecionada.');
+      }
+
+      // Check corporate domain strictly
+      if (!email.endsWith(`@${ALLOWED_CORPORATE_DOMAIN}`)) {
+        setError(
+          `Acesso Negado: A conta Google "${email}" não pertence ao domínio @${ALLOWED_CORPORATE_DOMAIN}. Por favor, entre com sua conta institucional da Sou Energy.`
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      const isMasterAdmin = SUPER_ADMIN_EMAILS.some(adm => adm.toLowerCase() === email);
+
+      let formattedName = (user.displayName || '').trim();
+      if (!formattedName) {
+        const namePart = email.split('@')[0];
+        formattedName = namePart
+          .split('.')
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+      }
+
+      const session: UserSession = {
+        email: email,
+        name: formattedName,
+        role: isMasterAdmin ? 'admin' : 'colaborador',
+        isAdmin: isMasterAdmin,
+        avatar: user.photoURL || formattedName.charAt(0).toUpperCase() || 'U',
+        department: isMasterAdmin ? 'Administração Geral & TI' : 'Geral / Operações',
+        loginTime: new Date().toISOString()
+      };
+
+      onLogin(session);
+    } catch (err: any) {
+      console.warn('Google Auth Error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('A janela de autenticação do Google foi fechada antes da conclusão.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('O navegador bloqueou a janela pop-up. Por favor, permita pop-ups para este site e tente novamente.');
+      } else {
+        setError(err.message || 'Erro ao autenticar com o Google Workspace. Tente novamente.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-neutral-100 dark:bg-neutral-950 font-sans">
-      <div className="w-full max-w-sm p-7 sm:p-8 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl space-y-6 relative overflow-hidden text-center">
+      <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl space-y-6 relative overflow-hidden text-center">
         {/* Accent Top Line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500" />
 
         {/* Brand Logo & Name */}
         <div className="space-y-3 pt-2 flex flex-col items-center">
-          <div className="w-14 h-14 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 p-2.5 flex items-center justify-center border border-orange-500/20 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 p-3 flex items-center justify-center border border-orange-500/20 shadow-xs">
             <img 
               src={SOU_ENERGY_ICON} 
               alt="Logo Sou Energy" 
@@ -139,39 +97,36 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
             />
           </div>
 
-          <div className="space-y-1">
-            <h1 className="text-xl font-extrabold tracking-widest text-neutral-900 dark:text-white uppercase">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-extrabold tracking-wider text-neutral-900 dark:text-white uppercase">
               SOU ENERGY
             </h1>
-            <h2 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">
-              Base de Conhecimento
-            </h2>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange-600 dark:text-orange-400">
+              Biblioteca de Procedimentos
+            </p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto">
+              Acesso exclusivo para colaboradores via conta corporativa Google Workspace.
+            </p>
           </div>
         </div>
 
         {/* Error notification */}
         {error && (
-          <div className="p-3 rounded-2xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2 text-left animate-in fade-in">
+          <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2.5 text-left animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-            <span className="text-[11px] leading-relaxed">{error}</span>
+            <span className="text-[12px] leading-relaxed">{error}</span>
           </div>
         )}
 
-        {/* Google Login Visual Button */}
-        <div className="py-2 space-y-3">
-          {/* Official Google GSI Mount container if Client ID is configured */}
-          {clientId && (
-            <div ref={googleBtnRef} className="flex justify-center w-full" />
-          )}
-
-          {/* Clean Google Single Sign-On Button */}
+        {/* Google Workspace Login Button */}
+        <div className="space-y-3 pt-2">
           <button
             type="button"
             disabled={isLoading}
-            onClick={handleGoogleClick}
-            className="w-full py-3.5 px-5 rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-neutral-700 dark:text-neutral-100 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer shadow-xs hover:shadow-md active:scale-[0.98] group"
+            onClick={handleGoogleLogin}
+            className="w-full py-3.5 px-5 rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-neutral-800 dark:text-neutral-100 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer shadow-xs hover:shadow-md active:scale-[0.98] disabled:opacity-50"
           >
-            {/* Google SVG Icon */}
+            {/* Google Icon */}
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
@@ -190,9 +145,14 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            
-            <span>{isLoading ? 'Conectando...' : 'Fazer login com o Google'}</span>
+            <span>{isLoading ? 'Conectando ao Google...' : 'Entrar com Google Workspace'}</span>
           </button>
+        </div>
+
+        {/* Security Info */}
+        <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-center gap-1.5 text-[11px] text-neutral-400">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+          <span>Apenas contas <strong>@{ALLOWED_CORPORATE_DOMAIN}</strong></span>
         </div>
       </div>
     </div>

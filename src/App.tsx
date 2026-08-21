@@ -38,6 +38,8 @@ import {
   canUserEditCategory, 
   canUserCreateTutorial 
 } from './utils/permissions';
+import { auth } from './lib/firebase';
+import { signOut } from 'firebase/auth';
 
 export default function App() {
   // Authentication State
@@ -205,6 +207,7 @@ export default function App() {
     setIsEditMode(false);
     setIsTvMode(false);
     localStorage.removeItem(LOCAL_USER_KEY);
+    signOut(auth).catch(() => {});
     showToast('Sessão encerrada com sucesso.');
   };
 
