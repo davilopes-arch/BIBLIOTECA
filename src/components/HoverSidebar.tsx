@@ -131,8 +131,8 @@ export const HoverSidebar: React.FC<HoverSidebarProps> = ({
           </button>
         )}
 
-        {/* Métricas e Feedback */}
-        {onOpenAnalytics && (
+        {/* Métricas e Feedback (Apenas Super Administrador) */}
+        {onOpenAnalytics && isSuperAdmin(user) && (
           <button
             onClick={onOpenAnalytics}
             className="w-full h-9 rounded-lg flex items-center px-2.5 gap-3 text-[13px] text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors cursor-pointer"

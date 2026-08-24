@@ -129,16 +129,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="sm:hidden">Manual</span>
           </button>
 
-          {/* Operational Analytics & Feedback Modal Button */}
-          <button
-            onClick={onOpenAnalytics}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer shadow-xs"
-            title="Métricas Operacionais, Feedbacks e Tutoriais Críticos"
-          >
-            <BarChart3 className="w-3.5 h-3.5 text-neutral-500" />
-            <span className="hidden sm:inline">Métricas & Feedback</span>
-            <span className="sm:hidden">Métricas</span>
-          </button>
+          {/* Operational Analytics & Feedback Modal Button (Apenas Super Administrador) */}
+          {isSuperAdmin(user) && (
+            <button
+              onClick={onOpenAnalytics}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer shadow-xs"
+              title="Métricas Operacionais, Feedbacks e Tutoriais Críticos"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-neutral-500" />
+              <span className="hidden sm:inline">Métricas & Feedback</span>
+              <span className="sm:hidden">Métricas</span>
+            </button>
+          )}
 
           {/* AI Assistant Quick Trigger with Pulsing Sparkle */}
           <button

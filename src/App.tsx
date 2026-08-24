@@ -855,18 +855,20 @@ export default function App() {
         }}
       />
 
-      {/* Operational Analytics & Feedback Modal */}
-      <AnalyticsModal
-        categories={categories}
-        user={user}
-        isOpen={isAnalyticsOpen}
-        onClose={() => setIsAnalyticsOpen(false)}
-        onSelectTutorial={(cat, tut) => {
-          setIsAnalyticsOpen(false);
-          handleOpenTutorialDetail(cat, tut);
-        }}
-        onResetAccessHistory={handleResetAccessHistory}
-      />
+      {/* Operational Analytics & Feedback Modal (Apenas Super Administrador) */}
+      {isSuperAdmin(user) && (
+        <AnalyticsModal
+          categories={categories}
+          user={user}
+          isOpen={isAnalyticsOpen}
+          onClose={() => setIsAnalyticsOpen(false)}
+          onSelectTutorial={(cat, tut) => {
+            setIsAnalyticsOpen(false);
+            handleOpenTutorialDetail(cat, tut);
+          }}
+          onResetAccessHistory={handleResetAccessHistory}
+        />
+      )}
 
       {/* Export Department Manual PDF Modal */}
       <ExportManualModal

@@ -30,10 +30,10 @@ async function startServer() {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
-  // AI Assistant Chat Route: Questions & Answers based on knowledge base
+  // AI Assistant Chat Route: Questions & Answers based on knowledge base + optional Web Search
   app.post('/api/ai/ask', async (req, res) => {
     try {
-      const { question, context } = req.body;
+      const { question, context, enableWebSearch } = req.body;
 
       if (!question || typeof question !== 'string') {
         return res.status(400).json({ error: 'Pergunta obrigatória.' });
@@ -52,43 +52,94 @@ async function startServer() {
       const prompt = `Você é o Assistente Oficial da Biblioteca Interna de Processos da empresa Sou Energy.
 Sua missão é responder com clareza, empatia e objetividade a dúvidas de colaboradores com base nos processos e tutoriais da empresa.
 
---- ACERVO DE CATEGORIAS E TUTORIAIS DA BIBLIOTECA ---
+--- ACERVO DE CATEGORIAS E TUTORIAIS DA BIBLIOTECA (SOU ENERGY) ---
 ${JSON.stringify(context || [], null, 2)}
-------------------------------------------------------
+------------------------------------------------------------------
 
 PERGUNTA DO COLABORADOR:
 "${question}"
 
+${enableWebSearch ? `PESQUISA NA WEB ATIVADA (Google Search Grounding):
+- O colaborador autorizou consulta externa na Web para enriquecer a resposta.
+- Priorize sempre os processos internos da Sou Energy caso existam no acervo.
+- Se a dúvida envolver regulamentações do setor elétrico/solar (ex: ANEEL, ABNT, concessionárias), manuais de fabricantes de inversores/módulos, legislação/tributação (ICMS/DIFAL) ou ferramentas externas (Google Workspace, ERPs, etc.), consulte a Web em tempo real com fontes atualizadas e confiáveis.
+- Deixe claro na resposta o que é procedimento oficial interno da Sou Energy e o que são referências/normas técnicas externas.` : `PESQUISA ESTREITAMENTE INTERNA:
+- Responda priorizando estritamente os tutoriais e procedimentos internos da Sou Energy.
+- Se a dúvida não estiver coberta no acervo interno da empresa, indique cordialmente que o procedimento não foi localizado na base interna e informe que ele pode ativar o toggle de pesquisa na Web para consultar informações externas.`}
+
 INSTRUÇÕES DE RESPOSTA:
-1. Responda em Português do Brasil com tom profissional e acolhedor.
-2. Identifique quais tutoriais da biblioteca atendem à dúvida e explique passo a passo como realizar o procedimento.
-3. Se houver dicas, notas de atenção ou regras específicas mencionadas nos passos dos tutoriais, inclua-as formatadas em blocos de alerta Markdown (ex: > [!NOTE], > [!WARNING], > [!TIP]).
+1. Responda em Português do Brasil com tom profissional, claro e acolhedor.
+2. Se houver tutoriais internos correspondentes, liste o passo a passo de forma organizada.
+3. Se houver dicas, notas de atenção ou regras específicas, utilize blocos de alerta Markdown (ex: > [!NOTE], > [!WARNING], > [!TIP]).
 4. Retorne sua resposta em formato JSON estrito com os campos:
    - "answer": string (a resposta completa e bem formatada em Markdown)
-   - "matchedTutorialIds": string[] (array com os IDs dos tutoriais que você utilizou para responder)
+   - "matchedTutorialIds": string[] (array com os IDs dos tutoriais da base interna utilizados)
 
-Exemplo de formato JSON esperado:
+Exemplo de formato JSON:
 {
   "answer": "Para solicitar suas férias, siga os seguintes passos:\\n\\n1. Acesse o portal RH...",
   "matchedTutorialIds": ["tut_ferias_01"]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+      const generateOptions: any = {
+        model: 'gemini-3.7-flash',
         contents: prompt,
-        config: {
+      };
+
+      if (enableWebSearch) {
+        generateOptions.tools = [{ googleSearch: {} }];
+      } else {
+        generateOptions.config = {
           responseMimeType: 'application/json'
+        };
+      }
+
+      const response = await ai.models.generateContent(generateOptions);
+
+      // Extract Web Grounding Metadata if present
+      const candidate = response.candidates?.[0];
+      const groundingMetadata = candidate?.groundingMetadata;
+      const webSources: Array<{ title: string; url: string }> = [];
+
+      if (groundingMetadata?.groundingChunks) {
+        const seenUrls = new Set<string>();
+        for (const chunk of groundingMetadata.groundingChunks) {
+          if (chunk.web?.uri) {
+            if (!seenUrls.has(chunk.web.uri)) {
+              seenUrls.add(chunk.web.uri);
+              webSources.push({
+                title: chunk.web.title || chunk.web.uri,
+                url: chunk.web.uri
+              });
+            }
+          }
         }
-      });
+      }
 
       const responseText = response.text || '{}';
+      let cleanText = responseText.trim();
+      if (cleanText.startsWith('```json')) {
+        cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanText.startsWith('```')) {
+        cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
       try {
-        const parsed = JSON.parse(responseText);
-        return res.json(parsed);
+        const parsed = JSON.parse(cleanText);
+        return res.json({
+          answer: parsed.answer || cleanText,
+          matchedTutorialIds: parsed.matchedTutorialIds || [],
+          webSources,
+          searchQueries: groundingMetadata?.webSearchQueries || [],
+          usedWebSearch: Boolean(enableWebSearch)
+        });
       } catch (parseErr) {
         return res.json({
           answer: responseText,
-          matchedTutorialIds: []
+          matchedTutorialIds: [],
+          webSources,
+          searchQueries: groundingMetadata?.webSearchQueries || [],
+          usedWebSearch: Boolean(enableWebSearch)
         });
       }
     } catch (err: any) {
@@ -144,7 +195,7 @@ Retorne estritamente um objeto JSON com a seguinte estrutura:
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.7-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json'
