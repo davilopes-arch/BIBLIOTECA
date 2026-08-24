@@ -92,20 +92,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="space-y-4">
       {/* Top Banner / Corporate Greeting */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2">
-            <span>Base de Conhecimento</span>
-            <span className="text-orange-600 dark:text-orange-500 font-bold">&</span>
-            <span>Processos</span>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-1">
+        <div className="max-w-2xl">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white leading-tight">
+            Base de Conhecimento{' '}
+            <span className="inline-flex items-center text-orange-600 dark:text-orange-500 font-bold whitespace-nowrap">
+              &amp; Processos
+            </span>
           </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
             Manuais operacionais, fluxos padronizados e tutoriais passo a passo da Sou Energy.
           </p>
         </div>
 
         {/* Quick Action Navigation Bar */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           {/* Guided Onboarding Tracks Button */}
           <button
             onClick={onOpenOnboarding}

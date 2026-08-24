@@ -627,7 +627,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 flex transition-colors duration-150">
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors duration-150 relative">
       {/* Hidden File Input for Backups */}
       <input
         ref={importFileInputRef}
@@ -668,10 +668,11 @@ export default function App() {
         onOpenExportManual={() => setIsExportManualOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 ml-12 p-4 sm:p-8 max-w-7xl mx-auto space-y-6 overflow-x-hidden">
-        {/* Top Navbar with Search & Filters */}
-        <Navbar
+      {/* Centered Main Content Container with left padding for fixed sidebar */}
+      <div className="pl-12 w-full min-h-screen flex justify-center">
+        <main className="w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6 overflow-x-hidden">
+          {/* Top Navbar with Search & Filters */}
+          <Navbar
           categories={categories}
           filters={filters}
           onUpdateFilters={(newF) => setFilters(prev => ({ ...prev, ...newF }))}
@@ -766,6 +767,7 @@ export default function App() {
           )}
         </div>
       </main>
+      </div>
 
       {/* Floating AI Assistant Trigger Button with pulsing effect */}
       <div className="fixed bottom-6 right-6 z-40 group flex items-center gap-3">

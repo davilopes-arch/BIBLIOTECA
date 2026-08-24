@@ -282,8 +282,20 @@ export const HoverSidebar: React.FC<HoverSidebarProps> = ({
       {/* Footer: User Profile & Logout */}
       <div className="shrink-0 pt-2 border-t border-neutral-800 px-1.5 space-y-1">
         <div className="flex items-center px-2 py-1.5 gap-2.5 rounded-lg bg-neutral-950/40">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-orange-600 to-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0 ring-1 ring-neutral-700">
-            {user.avatar || user.name[0] || 'U'}
+          <div className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-tr from-orange-600 to-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0 ring-1 ring-neutral-700">
+            {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://') || user.avatar.startsWith('data:image/')) ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <span>{(user.name ? user.name[0] : 'U').toUpperCase()}</span>
+            )}
           </div>
           <div className="overflow-hidden opacity-0 group-hover/sidebar:opacity-100 transition-opacity flex-1 min-w-0">
             <p className="text-[12px] font-medium text-white truncate flex items-center gap-1">
