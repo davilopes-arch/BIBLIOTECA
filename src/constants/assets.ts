@@ -1,6 +1,7 @@
-export const SOU_ENERGY_ICON = '/logo.png';
+import { SOU_ENERGY_LOGO_BASE64 } from './logoBase64';
 
-export const SOU_ENERGY_LOGO_FULL = '/logo.png';
+export const SOU_ENERGY_ICON = SOU_ENERGY_LOGO_BASE64;
+export const SOU_ENERGY_LOGO_FULL = SOU_ENERGY_LOGO_BASE64;
 
 export const SWATCH_COLORS = [
   '#FF5A1F', '#D6430E', '#FF8C42', '#FFB347', '#F4B400',
