@@ -81,7 +81,7 @@ export const HoverSidebar: React.FC<HoverSidebarProps> = ({
         <img
           src={SOU_ENERGY_ICON}
           alt="Sou Energy"
-          className="w-6 h-6 object-contain shrink-0"
+          className="w-6 h-6 rounded-md object-cover shrink-0"
         />
         <span className="font-extrabold text-xs tracking-wider text-white whitespace-nowrap opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-150 uppercase">
           SOU ENERGY

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle, ShieldCheck, Mail, User, Building2, ArrowRight, HelpCircle, ExternalLink } from 'lucide-react';
 import { 
-  SOU_ENERGY_ICON, 
+  SOU_ENERGY_ICON,
   ALLOWED_CORPORATE_DOMAIN,
   SUPER_ADMIN_EMAILS
 } from '../constants/assets';
@@ -148,11 +148,11 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
 
         {/* Brand Logo & Name */}
         <div className="space-y-3 pt-2 flex flex-col items-center">
-          <div className="w-16 h-16 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 p-3 flex items-center justify-center border border-orange-500/20 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-orange-500/20 flex items-center justify-center bg-orange-600 p-0.5">
             <img 
               src={SOU_ENERGY_ICON} 
               alt="Logo Sou Energy" 
-              className="w-full h-full object-contain" 
+              className="w-full h-full object-cover rounded-xl" 
             />
           </div>
 

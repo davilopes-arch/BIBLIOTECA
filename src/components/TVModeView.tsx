@@ -44,7 +44,7 @@ export const TVModeView: React.FC<TVModeViewProps> = ({
       {/* TV Header Bar */}
       <header className="px-6 py-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <img src={SOU_ENERGY_ICON} alt="Sou Energy" className="w-8 h-8 object-contain" />
+          <img src={SOU_ENERGY_ICON} alt="Sou Energy" className="w-8 h-8 rounded-lg object-cover" />
           <div>
             <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
               Biblioteca de Processos
