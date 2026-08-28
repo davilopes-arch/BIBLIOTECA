@@ -1,5 +1,5 @@
 import React from 'react';
-import { Category, Tutorial, UserSession, SearchFilters, OnboardingTrack } from './types';
+import { Category, Tutorial, UserSession, SearchFilters } from './types';
 import { 
   fetchCategoriesFromRemote, 
   saveCategoriesToRemote, 
@@ -8,28 +8,27 @@ import {
   LOCAL_THEME_KEY, 
   LOCAL_USER_KEY,
   generateId,
-  getOnboardingTracks,
   resetTutorialViews,
   clearAccessHistory,
   saveLocalCategories,
   syncCategoriesToFirestore
 } from './utils/storage';
+import { logTutorialAccess, clearAllAccessLogs } from './utils/analyticsTracker';
 import { HoverSidebar } from './components/HoverSidebar';
 import { Navbar } from './components/Navbar';
 import { Shelf } from './components/Shelf';
+import { KanbanBoard } from './components/KanbanBoard';
 import { QuickSection } from './components/QuickSection';
 import { DetailModal } from './components/DetailModal';
 import { TutorialFormModal } from './components/TutorialFormModal';
 import { CategoryFormModal } from './components/CategoryFormModal';
-import { AIProcessAssistant } from './components/AIProcessAssistant';
 import { TVModeView } from './components/TVModeView';
 import { ConfirmModal } from './components/ConfirmModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { LoginCard } from './components/LoginCard';
 import { AnalyticsModal } from './components/AnalyticsModal';
-import { OnboardingModal } from './components/OnboardingModal';
 import { ExportManualModal } from './components/ExportManualModal';
-import { Sparkles, Inbox, FolderTree } from 'lucide-react';
+import { Inbox, FolderTree } from 'lucide-react';
 import { 
   isSuperAdmin, 
   isAreaEditor, 
@@ -70,6 +69,7 @@ export default function App() {
   // UI Modes
   const [isEditMode, setIsEditMode] = React.useState(false);
   const [isTvMode, setIsTvMode] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<'kanban' | 'list'>('kanban');
   const [openShelfIds, setOpenShelfIds] = React.useState<Set<string>>(new Set());
 
   // Search & Filtering State
@@ -86,10 +86,8 @@ export default function App() {
   const [categoryModal, setCategoryModal] = React.useState<{ isOpen: boolean; categoryToEdit?: Category | null }>({ isOpen: false });
   const [tutorialModal, setTutorialModal] = React.useState<{ isOpen: boolean; categoryId?: string; tutorialToEdit?: Tutorial | null }>({ isOpen: false });
   const [confirmState, setConfirmState] = React.useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
-  const [isAssistantOpen, setIsAssistantOpen] = React.useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = React.useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = React.useState(false);
-  const [isOnboardingOpen, setIsOnboardingOpen] = React.useState(false);
   const [isExportManualOpen, setIsExportManualOpen] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
 
@@ -120,16 +118,18 @@ export default function App() {
       let { categories: fetched, version } = await fetchCategoriesFromRemote();
 
       // Ensure all initial/legacy access view counts start from 0 for fresh tracking
-      const RESET_FLAG_KEY = 'souenergy_access_history_reset_2026';
+      const RESET_FLAG_KEY = 'souenergy_fresh_zero_indicators_v4';
       if (!localStorage.getItem(RESET_FLAG_KEY)) {
         fetched = resetTutorialViews(fetched);
         clearAccessHistory();
+        clearAllAccessLogs();
         localStorage.setItem(RESET_FLAG_KEY, 'true');
         saveLocalCategories(fetched);
         syncCategoriesToFirestore(fetched).catch(() => {});
       }
 
       setCategories(fetched);
+      setOpenShelfIds(new Set(fetched.map(c => c.id)));
       setDataVersion(version);
       setFavorites(getFavorites());
       setIsLoading(false);
@@ -162,10 +162,8 @@ export default function App() {
         setCategoryModal({ isOpen: false });
         setTutorialModal({ isOpen: false });
         setConfirmState(null);
-        setIsAssistantOpen(false);
         setIsShortcutsOpen(false);
         setIsAnalyticsOpen(false);
-        setIsOnboardingOpen(false);
         setIsExportManualOpen(false);
         if (isTvMode) setIsTvMode(false);
         return;
@@ -177,9 +175,6 @@ export default function App() {
         e.preventDefault();
         const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
         searchInput?.focus();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsAssistantOpen(prev => !prev);
       } else if (e.key.toLowerCase() === 'e' && (isSuperAdmin(user) || isAreaEditor(user)) && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         setIsEditMode(prev => !prev);
@@ -321,6 +316,57 @@ export default function App() {
     await saveAndSync(updated);
   };
 
+  const handleMoveTutorial = async (fromCatId: string, toCatId: string, tutId: string, targetTutId?: string) => {
+    const sourceCat = categories.find(c => c.id === fromCatId);
+    const targetCat = categories.find(c => c.id === toCatId);
+    if (!sourceCat || !targetCat) return;
+
+    if (!canUserEditCategory(user, sourceCat) || !canUserEditCategory(user, targetCat)) {
+      showToast('Você não possui permissão para mover tutoriais entre estas categorias.');
+      return;
+    }
+
+    const tutToMove = sourceCat.tutoriais.find(t => t.id === tutId);
+    if (!tutToMove) return;
+
+    if (fromCatId === toCatId) {
+      if (targetTutId && targetTutId !== tutId) {
+        handleReorderTutorials(fromCatId, tutId, targetTutId);
+      }
+      return;
+    }
+
+    const updatedCategories = categories.map(cat => {
+      if (cat.id === fromCatId) {
+        return {
+          ...cat,
+          tutoriais: cat.tutoriais.filter(t => t.id !== tutId)
+        };
+      }
+      if (cat.id === toCatId) {
+        const tuts = [...cat.tutoriais];
+        if (targetTutId) {
+          const targetIndex = tuts.findIndex(t => t.id === targetTutId);
+          if (targetIndex !== -1) {
+            tuts.splice(targetIndex, 0, tutToMove);
+          } else {
+            tuts.push(tutToMove);
+          }
+        } else {
+          tuts.push(tutToMove);
+        }
+        return {
+          ...cat,
+          tutoriais: tuts
+        };
+      }
+      return cat;
+    });
+
+    await saveAndSync(updatedCategories);
+    showToast(`Procedimento movido para "${targetCat.nome}"`);
+  };
+
   // Tutorial Actions
   const handleSaveTutorial = async (categoryId: string, tutData: Partial<Tutorial>) => {
     if (!canUserEditCategory(user, categoryId)) {
@@ -442,7 +488,7 @@ export default function App() {
   const handleOpenTutorialDetail = async (category: Category, tutorial: Tutorial) => {
     setActiveTutorial({ category, tutorial });
 
-    // Do NOT increment access count if the user is super admin or davi.lopes@souenergy.com.br
+    // Do NOT log access or increment view counts if the user is super admin or davi.lopes@souenergy.com.br
     const isExcludedAdmin = isSuperAdmin(user) || 
       (user?.email && user.email.toLowerCase().trim() === 'davi.lopes@souenergy.com.br') ||
       user?.role === 'admin' ||
@@ -451,6 +497,17 @@ export default function App() {
     if (isExcludedAdmin) {
       return;
     }
+
+    // Log the access event for non-admin collaborators
+    logTutorialAccess({
+      tutorialId: tutorial.id,
+      tutorialTitle: tutorial.titulo,
+      categoryId: category.id,
+      categoryName: category.nome,
+      userEmail: user?.email,
+      department: user?.department || category.departamento || category.nome,
+      action: 'view'
+    });
 
     // Increment views counter in background for regular collaborators and viewers
     const updatedCategories = categories.map(c => {
@@ -478,6 +535,7 @@ export default function App() {
     const cleared = resetTutorialViews(categories);
     setCategories(cleared);
     clearAccessHistory();
+    clearAllAccessLogs();
     await saveCategoriesToRemote(cleared, dataVersion, user?.email).then(res => {
       if (res.newVersion) setDataVersion(res.newVersion);
     });
@@ -662,132 +720,127 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
-        onOpenAssistant={() => setIsAssistantOpen(true)}
-        onOpenOnboarding={() => setIsOnboardingOpen(true)}
         onOpenAnalytics={() => setIsAnalyticsOpen(true)}
         onOpenExportManual={() => setIsExportManualOpen(true)}
       />
 
       {/* Centered Main Content Container with left padding for fixed sidebar */}
       <div className="pl-12 w-full min-h-screen flex justify-center">
-        <main className="w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6 overflow-x-hidden">
+        <main className="w-full max-w-7xl 2xl:max-w-[1700px] px-3 sm:px-6 py-4 sm:py-5 space-y-3.5">
           {/* Top Navbar with Search & Filters */}
           <Navbar
-          categories={categories}
-          filters={filters}
-          onUpdateFilters={(newF) => setFilters(prev => ({ ...prev, ...newF }))}
-          user={user}
-          isAdmin={user.isAdmin}
-          isEditMode={isEditMode}
-          isDark={isDark}
-          onToggleTheme={() => setIsDark(!isDark)}
-          onOpenNewCategoryModal={() => setCategoryModal({ isOpen: true })}
-          onOpenNewTutorialModal={() => setTutorialModal({ isOpen: true })}
-          onOpenAssistant={() => setIsAssistantOpen(true)}
-          onOpenOnboarding={() => setIsOnboardingOpen(true)}
-          onOpenAnalytics={() => setIsAnalyticsOpen(true)}
-          onOpenExportManual={() => setIsExportManualOpen(true)}
-          totalTutorialsCount={totalTutorialsCount}
-          filteredCount={filteredCount}
-        />
-
-        {/* Quick Access Strip (Favoritos & Mais Acessados) */}
-        {!filters.query && filters.selectedCategoryIds.length === 0 && !filters.onlyFavorites && !filters.onlyObsolete && (
-          <QuickSection
             categories={categories}
-            favorites={favorites}
-            onSelectTutorial={handleOpenTutorialDetail}
+            filters={filters}
+            onUpdateFilters={(newF) => setFilters(prev => ({ ...prev, ...newF }))}
+            user={user}
+            isAdmin={user.isAdmin}
+            isEditMode={isEditMode}
+            isDark={isDark}
+            onToggleTheme={() => setIsDark(!isDark)}
+            onOpenNewCategoryModal={() => setCategoryModal({ isOpen: true })}
+            onOpenNewTutorialModal={() => setTutorialModal({ isOpen: true })}
+            onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+            onOpenExportManual={() => setIsExportManualOpen(true)}
+            totalTutorialsCount={totalTutorialsCount}
+            filteredCount={filteredCount}
           />
-        )}
 
-        {/* Categories Shelves - Only show when selected from sidebar or filtered */}
-        <div className="space-y-4 pt-1">
-          {isLoading ? (
-            <div className="py-20 text-center space-y-3">
-              <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-xs text-neutral-500 font-medium">Carregando procedimentos da Sou Energy...</p>
-            </div>
-          ) : filters.selectedCategoryIds.length === 0 && !filters.query && !filters.onlyFavorites && !filters.onlyObsolete && !filters.selectedTag && !filters.selectedSubcategory ? (
-            /* Prompt state when no category is selected yet */
-            <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 space-y-4 shadow-xs">
-              <div className="w-16 h-16 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 text-orange-500 flex items-center justify-center mx-auto border border-orange-500/20">
-                <FolderTree className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
-                  Selecione uma categoria na barra lateral
-                </p>
-                <p className="text-xs text-neutral-500 max-w-md mx-auto">
-                  Passe o mouse sobre a barra lateral esquerda e clique no departamento ou categoria desejada para visualizar seus procedimentos.
-                </p>
-              </div>
-            </div>
-          ) : filteredCategories.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 space-y-2">
-              <Inbox className="w-10 h-10 text-neutral-400 mx-auto stroke-1" />
-              <p className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
-                Nenhum procedimento encontrado
-              </p>
-              <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                Tente buscar com outros termos ou selecione outra categoria na barra lateral.
-              </p>
-            </div>
-          ) : (
-            filteredCategories.map(cat => {
-              if (cat.tutoriais.length === 0 && !isEditMode) return null;
-
-              const isOpen = filters.query || filters.selectedCategoryIds.length > 0 ? true : openShelfIds.has(cat.id);
-              const canEditCat = canUserEditCategory(user, cat);
-              const canManageCatStruct = canUserManageCategories(user);
-
-              return (
-                <Shelf
-                  key={cat.id}
-                  category={cat}
-                  filteredTutorials={cat.tutoriais}
-                  isOpen={isOpen}
-                  onToggleOpen={() => handleToggleShelf(cat.id)}
-                  favorites={favorites}
-                  onToggleFavorite={handleToggleFavorite}
-                  onSelectTutorial={tut => handleOpenTutorialDetail(cat, tut)}
-                  isEditMode={isEditMode}
-                  canEditCategory={canEditCat}
-                  canManageCategoryStructure={canManageCatStruct}
-                  onEditCategory={() => setCategoryModal({ isOpen: true, categoryToEdit: cat })}
-                  onDeleteCategory={() => handleDeleteCategory(cat)}
-                  onAddTutorial={() => setTutorialModal({ isOpen: true, categoryId: cat.id })}
-                  onEditTutorial={tut => setTutorialModal({ isOpen: true, categoryId: cat.id, tutorialToEdit: tut })}
-                  onDuplicateTutorial={tut => handleDuplicateTutorial(cat, tut)}
-                  onDeleteTutorial={tut => handleDeleteTutorial(cat, tut)}
-                  onReorderCategories={handleReorderCategories}
-                  onReorderTutorials={handleReorderTutorials}
-                />
-              );
-            })
+          {/* Quick Access Strip (Favoritos & Mais Acessados) */}
+          {!filters.query && filters.selectedCategoryIds.length === 0 && !filters.onlyFavorites && !filters.onlyObsolete && (
+            <QuickSection
+              categories={categories}
+              favorites={favorites}
+              onSelectTutorial={handleOpenTutorialDetail}
+            />
           )}
-        </div>
-      </main>
-      </div>
 
-      {/* Floating AI Assistant Trigger Button with pulsing effect */}
-      <div className="fixed bottom-6 right-6 z-40 group flex items-center gap-3">
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-neutral-900/90 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap backdrop-blur-xs">
-          Assistente IA Sou Energy
-        </span>
-        <div className="relative flex items-center justify-center">
-          {/* Animated pulsing outer halo rings */}
-          <span className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 opacity-75 blur-xs animate-pulse" />
-          <span className="absolute -inset-2 rounded-full bg-orange-500/30 animate-ping" />
-          
-          <button
-            onClick={() => setIsAssistantOpen(true)}
-            className="relative w-14 h-14 rounded-full bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
-            title="Assistente de Processos IA"
-            aria-label="Abrir Assistente de Processos com Inteligência Artificial"
-          >
-            <Sparkles className="w-6 h-6 animate-pulse" />
-          </button>
-        </div>
+          {/* Categories Kanban / Shelves Section */}
+          <div className="space-y-3 pt-0.5">
+            {isLoading ? (
+              <div className="py-16 text-center space-y-2.5">
+                <div className="w-7 h-7 border-2.5 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-xs text-neutral-500 font-medium">Carregando procedimentos da Sou Energy...</p>
+              </div>
+            ) : filteredCategories.length === 0 ? (
+              <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-2 shadow-2xs">
+                <Inbox className="w-8 h-8 text-neutral-400 mx-auto stroke-1" />
+                <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                  Nenhum procedimento encontrado
+                </p>
+                <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                  Tente buscar por outros termos ou desmarque os filtros ativos.
+                </p>
+              </div>
+            ) : viewMode === 'kanban' ? (
+              <KanbanBoard
+                categories={filteredCategories.filter(cat => cat.tutoriais.length > 0 || isEditMode)}
+                favorites={favorites}
+                onToggleFavorite={handleToggleFavorite}
+                onSelectTutorial={handleOpenTutorialDetail}
+                isEditMode={isEditMode}
+                user={user}
+                canUserEditCategory={canUserEditCategory}
+                canUserManageCategories={canUserManageCategories}
+                onEditCategory={cat => setCategoryModal({ isOpen: true, categoryToEdit: cat })}
+                onDeleteCategory={handleDeleteCategory}
+                onAddTutorial={catId => setTutorialModal({ isOpen: true, categoryId: catId })}
+                onEditTutorial={(catId, tut) => setTutorialModal({ isOpen: true, categoryId: catId, tutorialToEdit: tut })}
+                onDuplicateTutorial={handleDuplicateTutorial}
+                onDeleteTutorial={handleDeleteTutorial}
+                onReorderCategories={handleReorderCategories}
+                onReorderTutorials={handleReorderTutorials}
+                onMoveTutorial={handleMoveTutorial}
+                viewMode={viewMode}
+                onToggleViewMode={() => setViewMode(prev => prev === 'kanban' ? 'list' : 'kanban')}
+                onOpenNewCategoryModal={() => setCategoryModal({ isOpen: true })}
+              />
+            ) : (
+              <div className="space-y-3">
+                {/* Switch back to Kanban bar */}
+                <div className="flex items-center justify-between px-1 py-0.5 text-xs text-neutral-500">
+                  <span>Modo Estantes / Lista Ativo</span>
+                  <button
+                    onClick={() => setViewMode('kanban')}
+                    className="font-semibold text-orange-600 hover:underline cursor-pointer"
+                  >
+                    Alternar para Quadro Kanban
+                  </button>
+                </div>
+                {filteredCategories.map(cat => {
+                  if (cat.tutoriais.length === 0 && !isEditMode) return null;
+
+                  const isOpen = filters.query || filters.selectedCategoryIds.length > 0 ? true : openShelfIds.has(cat.id);
+                  const canEditCat = canUserEditCategory(user, cat);
+                  const canManageCatStruct = canUserManageCategories(user);
+
+                  return (
+                    <Shelf
+                      key={cat.id}
+                      category={cat}
+                      filteredTutorials={cat.tutoriais}
+                      isOpen={isOpen}
+                      onToggleOpen={() => handleToggleShelf(cat.id)}
+                      favorites={favorites}
+                      onToggleFavorite={handleToggleFavorite}
+                      onSelectTutorial={tut => handleOpenTutorialDetail(cat, tut)}
+                      isEditMode={isEditMode}
+                      canEditCategory={canEditCat}
+                      canManageCategoryStructure={canManageCatStruct}
+                      onEditCategory={() => setCategoryModal({ isOpen: true, categoryToEdit: cat })}
+                      onDeleteCategory={() => handleDeleteCategory(cat)}
+                      onAddTutorial={() => setTutorialModal({ isOpen: true, categoryId: cat.id })}
+                      onEditTutorial={tut => setTutorialModal({ isOpen: true, categoryId: cat.id, tutorialToEdit: tut })}
+                      onDuplicateTutorial={tut => handleDuplicateTutorial(cat, tut)}
+                      onDeleteTutorial={tut => handleDeleteTutorial(cat, tut)}
+                      onReorderCategories={handleReorderCategories}
+                      onReorderTutorials={handleReorderTutorials}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </main>
       </div>
 
       {/* Detail Reader Modal */}
@@ -831,28 +884,6 @@ export default function App() {
         onClose={() => setTutorialModal({ isOpen: false })}
         onSave={handleSaveTutorial}
         user={user}
-      />
-
-      {/* AI Assistant Dialog */}
-      <AIProcessAssistant
-        categories={categories}
-        isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)}
-        onOpenTutorial={(cat, tut) => {
-          setIsAssistantOpen(false);
-          handleOpenTutorialDetail(cat, tut);
-        }}
-      />
-
-      {/* Onboarding Tracks Dialog */}
-      <OnboardingModal
-        categories={categories}
-        isOpen={isOnboardingOpen}
-        onClose={() => setIsOnboardingOpen(false)}
-        onSelectTutorial={(cat, tut) => {
-          setIsOnboardingOpen(false);
-          handleOpenTutorialDetail(cat, tut);
-        }}
       />
 
       {/* Operational Analytics & Feedback Modal (Apenas Super Administrador) */}

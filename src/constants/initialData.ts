@@ -310,45 +310,4 @@ export const DEFAULT_CATEGORIES: Category[] = [
   }
 ];
 
-export const DEFAULT_ONBOARDING_TRACKS: Array<{
-  id: string;
-  titulo: string;
-  descricao: string;
-  departamento: string;
-  cor: string;
-  tutorialIds: string[];
-}> = [
-  {
-    id: 'track-geral',
-    titulo: 'Integração Geral & Boas-Vindas Sou Energy',
-    descricao: 'Tutoriais essenciais para os primeiros 7 dias de qualquer novo colaborador na empresa.',
-    departamento: 'Geral / Todos',
-    cor: '#FF5A1F',
-    tutorialIds: ['t2', 't1', 't4', 't7']
-  },
-  {
-    id: 'track-operacoes',
-    titulo: 'Trilha de Operações & Campo',
-    descricao: 'Procedimentos mandatórios de segurança, abertura de unidade e manuseio de infraestrutura.',
-    departamento: 'Operações & Logística',
-    cor: '#D6430E',
-    tutorialIds: ['t11', 't10', 't4']
-  },
-  {
-    id: 'track-atendimento',
-    titulo: 'Trilha de Atendimento & Relacionamento',
-    descricao: 'Padrão de excelência no atendimento aos parceiros integradores e clientes finais.',
-    departamento: 'Sucesso do Cliente & Comercial',
-    cor: '#EA580C',
-    tutorialIds: ['t12', 't7', 't9']
-  },
-  {
-    id: 'track-ti',
-    titulo: 'Trilha de Segurança Digital & Acessos de TI',
-    descricao: 'Configuração de VPN segura, políticas de senhas e abertura de chamados.',
-    departamento: 'Tecnologia da Informação',
-    cor: '#C2410C',
-    tutorialIds: ['t4', 't5', 't6']
-  }
-];
 

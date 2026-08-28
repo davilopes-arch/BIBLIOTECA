@@ -1,5 +1,5 @@
 import { Category } from '../types';
-import { DEFAULT_CATEGORIES, DEFAULT_ONBOARDING_TRACKS } from '../constants/initialData';
+import { DEFAULT_CATEGORIES } from '../constants/initialData';
 import { 
   db, 
   auth, 
@@ -281,9 +281,5 @@ export function clearAccessHistory() {
 
 export function generateId(prefix: string = 'id'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
-
-export function getOnboardingTracks() {
-  return DEFAULT_ONBOARDING_TRACKS;
 }
 

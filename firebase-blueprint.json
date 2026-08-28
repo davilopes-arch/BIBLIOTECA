@@ -38,6 +38,23 @@
         "unhelpful": { "type": "number" }
       },
       "required": ["tutorialId"]
+    },
+    "AccessLog": {
+      "title": "AccessLog",
+      "description": "Individual access events for tutorials and procedures",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tutorialId": { "type": "string" },
+        "tutorialTitle": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "department": { "type": "string" },
+        "action": { "type": "string" }
+      },
+      "required": ["id", "tutorialId", "categoryId", "timestamp"]
     }
   },
   "firestore": {
@@ -52,6 +69,10 @@
     "/feedbacks/{tutorialId}": {
       "schema": "Feedback",
       "description": "Aggregated feedback votes per tutorial"
+    },
+    "/access_logs/{logId}": {
+      "schema": "AccessLog",
+      "description": "Log of user access events for analytics"
     }
   }
 }

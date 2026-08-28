@@ -142,42 +142,39 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-neutral-100 dark:bg-neutral-950 font-sans">
-      <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl space-y-6 relative overflow-hidden text-center">
+      <div className="w-full max-w-sm p-6 sm:p-7 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl space-y-5 relative overflow-hidden text-center">
         {/* Accent Top Line */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500" />
 
         {/* Brand Logo & Name */}
-        <div className="space-y-3 pt-2 flex flex-col items-center">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-orange-500/20 flex items-center justify-center bg-orange-600 p-0.5">
+        <div className="space-y-2 pt-1 flex flex-col items-center">
+          <div className="w-13 h-13 rounded-xl overflow-hidden shadow-xs border border-orange-500/20 flex items-center justify-center bg-orange-600 p-0.5">
             <img 
               src={SOU_ENERGY_ICON} 
               alt="Logo Sou Energy" 
-              className="w-full h-full object-cover rounded-xl" 
+              className="w-full h-full object-cover rounded-lg" 
             />
           </div>
 
-          <div className="space-y-1.5">
-            <h1 className="text-2xl font-extrabold tracking-wider text-neutral-900 dark:text-white uppercase">
+          <div>
+            <h1 className="text-xl font-extrabold tracking-wide text-neutral-900 dark:text-white uppercase">
               SOU ENERGY
             </h1>
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange-600 dark:text-orange-400">
-              Biblioteca de Procedimentos
-            </p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto">
-              Acesso restrito para colaboradores da Sou Energy.
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+              Biblioteca de Processos
             </p>
           </div>
         </div>
 
         {/* Error notification */}
         {error && (
-          <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2.5 text-left animate-in fade-in">
+          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2 text-left animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-            <div className="space-y-1.5 text-[12px] leading-relaxed">
+            <div className="space-y-1 text-[11.5px] leading-relaxed">
               <p>{error}</p>
               {isDomainError && (
-                <div className="text-[11px] text-red-600 dark:text-red-400 bg-red-100/60 dark:bg-red-900/40 p-2 rounded-lg font-mono">
-                  Dica: Adicione <strong>{currentHost}</strong> em <em>Firebase Console &gt; Authentication &gt; Settings &gt; Authorized Domains</em>.
+                <div className="text-[10.5px] text-red-600 dark:text-red-400 bg-red-100/60 dark:bg-red-900/40 p-1.5 rounded font-mono">
+                  Dica: Adicione <strong>{currentHost}</strong> no Firebase Console &gt; Auth &gt; Authorized Domains.
                 </div>
               )}
             </div>
@@ -185,15 +182,15 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
         )}
 
         {/* Google Workspace Button */}
-        <div className="space-y-3 pt-1">
+        <div>
           <button
             type="button"
             disabled={isLoading}
             onClick={handleGoogleLogin}
-            className="w-full py-3.5 px-5 rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-neutral-800 dark:text-neutral-100 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer shadow-xs hover:shadow-md active:scale-[0.98] disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 text-neutral-800 dark:text-neutral-100 font-semibold text-xs transition-all duration-150 flex items-center justify-center gap-2.5 cursor-pointer shadow-xs active:scale-[0.98] disabled:opacity-50"
           >
             {/* Google SVG */}
-            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -211,62 +208,53 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>{isLoading ? 'Conectando ao Google...' : 'Entrar com Google Workspace'}</span>
+            <span>{isLoading ? 'Conectando...' : 'Entrar com Google Workspace'}</span>
           </button>
         </div>
 
-        {/* Fallback Corporate Email Form (Shown on demand or if popup/domain error) */}
+        {/* Fallback Corporate Email Form */}
         {showManualForm ? (
-          <form onSubmit={handleManualEmailSubmit} className="space-y-4 pt-3 text-left border-t border-neutral-200 dark:border-neutral-800 animate-in fade-in">
+          <form onSubmit={handleManualEmailSubmit} className="space-y-3 pt-2 text-left border-t border-neutral-200 dark:border-neutral-800 animate-in fade-in">
             <div className="text-center">
-              <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Acesso Direto com E-mail @souenergy.com.br
+              <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                Acesso Direto @souenergy.com.br
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                Seu e-mail corporativo
-              </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
+                <Mail className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
                   required
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="nome.sobrenome@souenergy.com.br"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="seu.nome@souenergy.com.br"
+                  className="w-full pl-8 pr-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs placeholder:text-neutral-400 focus:outline-none focus:ring-1.5 focus:ring-orange-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                Nome completo
-              </label>
               <div className="relative">
-                <User className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
+                <User className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  placeholder="Ex: João Victor Silva"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Nome completo"
+                  className="w-full pl-8 pr-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs placeholder:text-neutral-400 focus:outline-none focus:ring-1.5 focus:ring-orange-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                Departamento / Setor
-              </label>
               <div className="relative">
-                <Building2 className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
+                <Building2 className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
                 <select
                   value={selectedDept}
                   onChange={(e) => setSelectedDept(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full pl-8 pr-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white text-xs focus:outline-none focus:ring-1.5 focus:ring-orange-500"
                 >
                   {DEPARTMENTS.map(d => (
                     <option key={d} value={d}>{d}</option>
@@ -278,27 +266,27 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onLogin }) => {
             <button
               type="submit"
               disabled={isLoading || !emailInput.trim()}
-              className="w-full py-3 px-5 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-[0.98] disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.98] disabled:opacity-50"
             >
-              <span>{isLoading ? 'Verificando...' : 'Confirmar e Acessar'}</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>{isLoading ? 'Verificando...' : 'Acessar'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
         ) : (
-          <div className="pt-1">
+          <div className="pt-0.5">
             <button
               type="button"
               onClick={() => setShowManualForm(true)}
-              className="text-xs text-orange-600 dark:text-orange-400 hover:underline font-medium cursor-pointer"
+              className="text-[11px] text-orange-600 dark:text-orange-400 hover:underline font-medium cursor-pointer"
             >
-              Problemas com pop-up ou autorização de domínio? Clique aqui
+              Problemas com login Google? Clique aqui
             </button>
           </div>
         )}
 
         {/* Security Info */}
-        <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-center gap-1.5 text-[11px] text-neutral-400">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+        <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-center gap-1.5 text-[10.5px] text-neutral-400">
+          <ShieldCheck className="w-3 h-3 text-emerald-500" />
           <span>Apenas contas <strong>@{ALLOWED_CORPORATE_DOMAIN}</strong></span>
         </div>
       </div>

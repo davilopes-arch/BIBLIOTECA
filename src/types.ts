@@ -6,16 +6,6 @@ export interface TutorialFeedback {
   timestamp: string;
 }
 
-export interface OnboardingTrack {
-  id: string;
-  titulo: string;
-  descricao: string;
-  departamento: string;
-  iconName?: string;
-  cor?: string;
-  tutorialIds: string[];
-}
-
 export interface TutorialHistory {
   timestamp: string;
   updatedBy: string;
@@ -63,6 +53,21 @@ export interface UserSession {
   allowedCategoryIds?: string[];
   loginTime: string;
 }
+
+export interface AccessLog {
+  id: string;
+  tutorialId: string;
+  tutorialTitle: string;
+  categoryId: string;
+  categoryName: string;
+  timestamp: string; // ISO date string
+  userEmail?: string;
+  department?: string;
+  action?: 'view' | 'checklist_complete' | 'pdf_download';
+}
+
+export type AnalyticsTimeframe = '7d' | '30d' | '90d' | '12m' | 'all';
+export type AnalyticsGrouping = 'day' | 'week' | 'month';
 
 export interface SearchFilters {
   query: string;
