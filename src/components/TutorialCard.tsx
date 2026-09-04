@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Star, 
-  Clock, 
   Eye, 
   Paperclip, 
   GripVertical, 
@@ -234,13 +233,9 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
         </div>
       )}
 
-      {/* Footer Meta: Duration, Views, Attachment, Updated Date */}
+      {/* Footer Meta: Views, Attachment, Updated Date */}
       <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between text-[10px] sm:text-[10.5px] text-neutral-500 dark:text-neutral-400">
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-0.5 font-medium">
-            <Clock className="w-2.5 h-2.5 text-neutral-400" />
-            {tutorial.duracao}
-          </span>
           <span className="flex items-center gap-0.5">
             <Eye className="w-2.5 h-2.5 text-neutral-400" />
             {tutorial.visualizacoes || 0}

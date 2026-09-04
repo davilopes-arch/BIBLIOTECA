@@ -147,7 +147,6 @@ export const ExportManualModal: React.FC<ExportManualModalProps> = ({
                 <h3 class="tut-title">${tIdx + 1}. ${tut.titulo}</h3>
                 <p class="tut-desc">${tut.desc || ''}</p>
                 <div class="tut-meta">
-                  <span>⏱️ Duração: <strong>${tut.duracao}</strong></span>
                   ${tut.subcategoria ? `<span>📂 Subcategoria: <strong>${tut.subcategoria}</strong></span>` : ''}
                   <span>✍️ Autor: <strong>${tut.author || 'Equipe Sou Energy'}</strong></span>
                   <span>🔄 Versão: <strong>v${tut.version || 1}</strong></span>

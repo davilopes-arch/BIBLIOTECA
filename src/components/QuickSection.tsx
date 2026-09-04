@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Flame, Clock } from 'lucide-react';
+import { Star, Flame } from 'lucide-react';
 import { Category, Tutorial } from '../types';
 
 interface QuickSectionProps {
@@ -69,11 +69,6 @@ export const QuickSection: React.FC<QuickSectionProps> = ({
                   {tutorial.titulo}
                 </h4>
                 <div className="flex items-center gap-1.5 text-[10px] text-neutral-500">
-                  <span className="flex items-center gap-0.5">
-                    <Clock className="w-2.5 h-2.5 text-neutral-400" />
-                    {tutorial.duracao}
-                  </span>
-                  <span>·</span>
                   <span>{tutorial.visualizacoes || 0} acessos</span>
                 </div>
               </div>
@@ -108,11 +103,6 @@ export const QuickSection: React.FC<QuickSectionProps> = ({
                   {tutorial.titulo}
                 </h4>
                 <div className="flex items-center gap-1.5 text-[10px] text-neutral-500">
-                  <span className="flex items-center gap-0.5">
-                    <Clock className="w-2.5 h-2.5 text-neutral-400" />
-                    {tutorial.duracao}
-                  </span>
-                  <span>·</span>
                   <span className="font-medium text-orange-600 dark:text-orange-400">
                     {tutorial.visualizacoes || 0} acessos
                   </span>

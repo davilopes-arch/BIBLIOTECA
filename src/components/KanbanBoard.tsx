@@ -83,23 +83,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <div className="space-y-3">
       {/* Kanban Controls Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1 py-1">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-            <LayoutGrid className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-              Quadro Kanban de Departamentos
-              <span className="text-xs font-normal text-neutral-500">
-                ({categories.length} colunas • {totalProcedures} procedimentos)
-              </span>
-            </h2>
-          </div>
-        </div>
-
+      <div className="flex items-center justify-end gap-1.5 px-1 py-0.5">
         {/* View switcher & Scroll buttons */}
-        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+        <div className="flex items-center gap-1.5">
           {/* Scroll Navigation Buttons */}
           <div className="flex items-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-0.5 shadow-2xs">
             <button

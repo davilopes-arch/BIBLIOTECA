@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tv, X, Clock, Play, Pause, ChevronRight } from 'lucide-react';
+import { Tv, X, Play, Pause, ChevronRight } from 'lucide-react';
 import { Category, Tutorial } from '../types';
 import { SOU_ENERGY_ICON } from '../constants/assets';
 
@@ -154,11 +154,7 @@ export const TVModeView: React.FC<TVModeViewProps> = ({
                     </p>
                   </div>
 
-                  <div className="pt-4 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-400 mt-4">
-                    <span className="flex items-center gap-1 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-neutral-500" />
-                      {tut.duracao}
-                    </span>
+                  <div className="pt-4 border-t border-neutral-800 flex items-center justify-end text-xs text-neutral-400 mt-4">
                     <span className="flex items-center gap-1 text-orange-400 font-semibold group-hover:translate-x-0.5 transition-transform">
                       Ver tutorial <ChevronRight className="w-3.5 h-3.5" />
                     </span>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   X, 
-  Clock, 
   Eye, 
   Paperclip, 
   CheckCircle2, 
@@ -13,13 +12,16 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Sparkles,
   Check,
   Volume2,
   VolumeX,
   ThumbsUp,
   ThumbsDown,
-  Calendar
+  Calendar,
+  ChevronsUpDown
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Category, Tutorial } from '../types';
@@ -51,6 +53,35 @@ export const DetailModal: React.FC<DetailModalProps> = ({
   const [isSpeaking, setIsSpeaking] = React.useState(false);
   const [feedbackVote, setFeedbackVote] = React.useState<boolean | null>(null);
   const [feedbackCounts, setFeedbackCounts] = React.useState({ helpful: 0, unhelpful: 0 });
+  const [expandedSteps, setExpandedSteps] = React.useState<number[]>([]);
+
+  // Helper to extract first phrase/title of a step
+  const getStepTeaser = (text: string) => {
+    if (!text) return { title: 'Ver detalhes do passo', hasMore: false };
+    const clean = text.replace(/^[#*`>\s\-]+/gm, '').trim();
+    const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+    const firstLine = lines[0] || '';
+    const hasMore = lines.length > 1 || text.includes('![') || text.length > 90;
+    return {
+      title: firstLine.length > 120 ? `${firstLine.slice(0, 117)}...` : firstLine,
+      hasMore
+    };
+  };
+
+  const toggleStepExpanded = (index: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedSteps(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  const toggleAllStepsExpanded = () => {
+    if (expandedSteps.length === tutorial.passos.length) {
+      setExpandedSteps([]);
+    } else {
+      setExpandedSteps(tutorial.passos.map((_, i) => i));
+    }
+  };
 
   // Load feedback
   React.useEffect(() => {
@@ -102,9 +133,10 @@ export const DetailModal: React.FC<DetailModalProps> = ({
     };
   }, [tutorial.id]);
 
-  // Reset completed steps when opening new tutorial
+  // Reset completed steps and expansion when opening new tutorial
   React.useEffect(() => {
     setCompletedSteps([]);
+    setExpandedSteps([]);
     setShowHistory(false);
     setScrollProgress(0);
     if (contentRef.current) {
@@ -280,11 +312,6 @@ export const DetailModal: React.FC<DetailModalProps> = ({
 
           {/* Metadata Badges Strip */}
           <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 pb-3 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
-            <span className="flex items-center gap-1 font-medium">
-              <Clock className="w-3.5 h-3.5 text-neutral-400" />
-              Tempo estimado: <strong>{tutorial.duracao}</strong>
-            </span>
-            <span>·</span>
             <span className="flex items-center gap-1">
               <Eye className="w-3.5 h-3.5 text-neutral-400" />
               <strong>{tutorial.visualizacoes || 0}</strong> visualizações
@@ -329,17 +356,29 @@ export const DetailModal: React.FC<DetailModalProps> = ({
             </div>
           )}
 
-          {/* Interactive Step Progress Tracker */}
+          {/* Interactive Step Progress Tracker & Collapse All Controls */}
           {totalSteps > 0 && (
-            <div className="space-y-1.5 pt-1">
+            <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-orange-500" />
                   Passo a Passo de Execução
                 </span>
-                <span className="font-mono text-[11px] text-neutral-500">
-                  {completedSteps.length}/{totalSteps} concluídos ({progressPercent}%)
-                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleAllStepsExpanded}
+                    className="text-[11px] font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <ChevronsUpDown className="w-3.5 h-3.5" />
+                    <span>
+                      {expandedSteps.length === totalSteps ? 'Recolher todos' : 'Expandir todos'}
+                    </span>
+                  </button>
+                  <span className="font-mono text-[11px] text-neutral-500">
+                    {completedSteps.length}/{totalSteps} concluídos ({progressPercent}%)
+                  </span>
+                </div>
               </div>
 
               {/* Progress Bar */}
@@ -352,43 +391,96 @@ export const DetailModal: React.FC<DetailModalProps> = ({
             </div>
           )}
 
-          {/* Step Items List */}
-          <div className="space-y-3">
+          {/* Step Items List (Collapsible / Expandable) */}
+          <div className="space-y-2.5">
             {tutorial.passos.map((passo, index) => {
               const isChecked = completedSteps.includes(index);
+              const isExpanded = expandedSteps.includes(index);
+              const { title: teaserTitle, hasMore } = getStepTeaser(passo);
+
               return (
                 <div
                   key={index}
-                  onClick={() => handleToggleStep(index)}
-                  className={`group p-4 rounded-xl border transition-all duration-150 flex items-start gap-3.5 cursor-pointer ${
+                  className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-2xs ${
                     isChecked
-                      ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-900/40 text-neutral-500 dark:text-neutral-400'
-                      : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 shadow-xs'
+                      ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300/80 dark:border-emerald-900/40'
+                      : isExpanded
+                      ? 'bg-white dark:bg-neutral-900 border-orange-300/80 dark:border-orange-500/40 ring-1 ring-orange-500/20 shadow-xs'
+                      : 'bg-white dark:bg-neutral-900 border-neutral-200/90 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
                   }`}
                 >
-                  {/* Step Number Badge and Check Icon */}
-                  <div className="pt-0.5 shrink-0 flex items-center justify-center">
-                    {isChecked ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-50 duration-150" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-[11px] font-bold text-neutral-500 group-hover:border-orange-500 group-hover:text-orange-600 transition-colors">
-                        {index + 1}
+                  {/* Step Header / Collapsed Bar */}
+                  <div
+                    onClick={() => toggleStepExpanded(index)}
+                    className="p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                  >
+                    {/* Checkbox Icon + Number */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleStep(index);
+                        }}
+                        className="shrink-0 p-0.5 rounded-full hover:scale-110 transition-transform cursor-pointer"
+                        title={isChecked ? 'Marcar como não concluído' : 'Marcar como concluído'}
+                      >
+                        {isChecked ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-50 duration-150" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-[10.5px] font-bold text-neutral-500 hover:border-orange-500 hover:text-orange-600 transition-colors">
+                            {index + 1}
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Title / First Phrase Preview */}
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-xs sm:text-[13.5px] font-bold leading-snug truncate ${
+                          isChecked 
+                            ? 'line-through text-neutral-400 dark:text-neutral-500' 
+                            : 'text-neutral-900 dark:text-neutral-100'
+                        }`}>
+                          {teaserTitle}
+                        </p>
+                        {!isExpanded && hasMore && (
+                          <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate mt-0.5 flex items-center gap-1">
+                            <span>Clique no balão para expandir os detalhes e imagens</span>
+                          </p>
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Expand/Collapse Chevron Indicator */}
+                    <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                      <span className={`text-[11px] font-medium transition-colors hidden sm:inline ${
+                        isExpanded ? 'text-orange-600 dark:text-orange-400' : 'text-neutral-400'
+                      }`}>
+                        {isExpanded ? 'Recolher' : 'Expandir'}
+                      </span>
+                      <div className={`p-1 rounded-lg text-neutral-400 transition-transform duration-200 ${
+                        isExpanded ? 'rotate-180 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/50' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                      }`}>
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Step Text Content with Markdown */}
-                  <div
-                    className="flex-1 min-w-0"
-                    onClick={e => {
-                      // Allow clicking links inside markdown without toggling checkbox
-                      if ((e.target as HTMLElement).tagName === 'A') {
-                        e.stopPropagation();
-                      }
-                    }}
-                  >
-                    <MarkdownRenderer content={passo} />
-                  </div>
+                  {/* Expanded Body with Full Markdown Content */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-1 border-t border-neutral-100 dark:border-neutral-800/80 animate-in fade-in duration-150">
+                      <div
+                        onClick={e => {
+                          const target = e.target as HTMLElement;
+                          if (target.closest('a') || target.closest('img') || target.closest('button') || target.closest('.cursor-zoom-in')) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        <MarkdownRenderer content={passo} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

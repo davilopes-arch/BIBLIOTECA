@@ -16,7 +16,10 @@ import {
   Eye,
   Loader2,
   FileText,
-  Upload
+  Upload,
+  Image as ImageIcon,
+  UploadCloud,
+  Check
 } from 'lucide-react';
 import { Category, Tutorial, UserSession } from '../types';
 import { uploadToDrive, MAX_ATTACH_MB } from '../utils/driveUpload';
@@ -31,6 +34,16 @@ interface TutorialFormModalProps {
   onClose: () => void;
   onSave: (catId: string, tutorial: Tutorial) => void;
   user: UserSession;
+}
+
+interface StepImageModalData {
+  stepIndex: number;
+  url: string;
+  caption: string;
+  mode: 'upload' | 'url';
+  isUploading: boolean;
+  uploadProgress: number;
+  error: string | null;
 }
 
 export const TutorialFormModal: React.FC<TutorialFormModalProps> = ({
@@ -62,6 +75,10 @@ export const TutorialFormModal: React.FC<TutorialFormModalProps> = ({
   // Steps list
   const [passos, setPassos] = React.useState<string[]>(['']);
   const [activeTab, setActiveTab] = React.useState<'edit' | 'preview'>('edit');
+
+  // Step Image Attachment Modal State
+  const [stepImageModal, setStepImageModal] = React.useState<StepImageModalData | null>(null);
+  const stepImageInputRef = React.useRef<HTMLInputElement>(null);
 
   // AI Generation State
   const [isGeneratingAI, setIsGeneratingAI] = React.useState(false);
@@ -124,6 +141,94 @@ export const TutorialFormModal: React.FC<TutorialFormModalProps> = ({
     setPassos(prev => {
       const copy = [...prev];
       copy[index] = (copy[index] ? copy[index] + '\n' : '') + snippet;
+      return copy;
+    });
+  };
+
+  // Step image attachment modal handlers
+  const handleOpenStepImageModal = (index: number) => {
+    setStepImageModal({
+      stepIndex: index,
+      url: '',
+      caption: '',
+      mode: 'upload',
+      isUploading: false,
+      uploadProgress: 0,
+      error: null
+    });
+  };
+
+  const handleStepImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !stepImageModal) return;
+
+    if (!file.type.startsWith('image/')) {
+      setStepImageModal(prev => prev ? { ...prev, error: 'Selecione um arquivo de imagem válido (PNG, JPG, WebP, GIF).' } : null);
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      setStepImageModal(prev => prev ? { ...prev, error: 'A imagem deve ter no máximo 20MB.' } : null);
+      return;
+    }
+
+    setStepImageModal(prev => prev ? { ...prev, isUploading: true, uploadProgress: 0, error: null } : null);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      try {
+        const cloudUrl = await uploadToDrive(file, pct => {
+          setStepImageModal(prev => prev ? { ...prev, uploadProgress: pct } : null);
+        });
+        setStepImageModal(prev => prev ? { 
+          ...prev, 
+          url: cloudUrl, 
+          caption: prev.caption || file.name.replace(/\.[^/.]+$/, ''),
+          isUploading: false 
+        } : null);
+      } catch (err) {
+        console.warn('Upload remoto não disponível, utilizando imagem incorporada:', err);
+        setStepImageModal(prev => prev ? { 
+          ...prev, 
+          url: dataUrl, 
+          caption: prev.caption || file.name.replace(/\.[^/.]+$/, ''),
+          isUploading: false 
+        } : null);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyStepImage = () => {
+    if (!stepImageModal || !stepImageModal.url) return;
+    const { stepIndex, url, caption } = stepImageModal;
+    const altText = caption.trim() || `Imagem do Passo ${stepIndex + 1}`;
+    const imageMarkdown = `\n\n![${altText}](${url.trim()})\n`;
+
+    setPassos(prev => {
+      const copy = [...prev];
+      copy[stepIndex] = (copy[stepIndex] ? copy[stepIndex] : '') + imageMarkdown;
+      return copy;
+    });
+
+    setStepImageModal(null);
+  };
+
+  const extractImagesFromStep = (stepText: string) => {
+    const regex = /!\[(.*?)\]\((.*?)\)/g;
+    const matches: { full: string; alt: string; url: string }[] = [];
+    let m;
+    while ((m = regex.exec(stepText)) !== null) {
+      matches.push({ full: m[0], alt: m[1], url: m[2] });
+    }
+    return matches;
+  };
+
+  const handleRemoveImageFromStep = (stepIndex: number, fullMatch: string) => {
+    setPassos(prev => {
+      const copy = [...prev];
+      copy[stepIndex] = copy[stepIndex].replace(fullMatch, '').trim();
       return copy;
     });
   };
@@ -297,36 +402,22 @@ export const TutorialFormModal: React.FC<TutorialFormModalProps> = ({
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-700">
           
           {/* Row 1: Category & Duration */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1">
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
-                Categoria *
-              </label>
-              <select
-                value={selectedCatId}
-                onChange={e => setSelectedCatId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-orange-500 font-medium"
-              >
-                {allowedCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
-                Tempo Estimado
-              </label>
-              <input
-                type="text"
-                value={duracao}
-                onChange={e => setDuracao(e.target.value)}
-                placeholder="Ex: 5 min"
-                className="w-full px-3 py-2 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-orange-500"
-              />
-            </div>
+          {/* Row 1: Category */}
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+              Categoria *
+            </label>
+            <select
+              value={selectedCatId}
+              onChange={e => setSelectedCatId(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-orange-500 font-medium"
+            >
+              {allowedCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.nome}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Row 2: Title with AI Auto-Generator Button */}
@@ -566,6 +657,14 @@ export const TutorialFormModal: React.FC<TutorialFormModalProps> = ({
                         >
                           <Link2 className="w-3 h-3" />
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenStepImageModal(pIdx)}
+                          className="p-1 rounded text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-950/60 transition-colors cursor-pointer"
+                          title="Anexar Imagem ou Print neste passo"
+                        >
+                          <ImageIcon className="w-3 h-3" />
+                        </button>
 
                         {passos.length > 1 && (
                           <button
@@ -587,6 +686,41 @@ export const TutorialFormModal: React.FC<TutorialFormModalProps> = ({
                       placeholder={`Descreva o passo ${pIdx + 1} em detalhes...`}
                       className="w-full px-3 py-2 text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-orange-500"
                     />
+
+                    {/* Detected step images list & management */}
+                    {extractImagesFromStep(passo).length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {extractImagesFromStep(passo).map((img, iIdx) => (
+                          <div
+                            key={iIdx}
+                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-orange-50/80 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 text-xs shadow-2xs"
+                          >
+                            <img
+                              src={img.url}
+                              alt={img.alt}
+                              className="w-7 h-7 rounded-lg object-cover border border-orange-300 dark:border-orange-700 shrink-0 bg-white"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="flex flex-col min-w-0 max-w-[200px]">
+                              <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate text-[11px]">
+                                {img.alt || 'Imagem do passo'}
+                              </span>
+                              <span className="text-[9.5px] text-neutral-400 dark:text-neutral-500 truncate font-mono">
+                                {img.url.startsWith('data:') ? 'Imagem carregada' : img.url}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImageFromStep(pIdx, img.full)}
+                              className="p-1 rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-950/60 transition-colors ml-1 cursor-pointer"
+                              title="Remover imagem deste passo"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -663,6 +797,182 @@ export const TutorialFormModal: React.FC<TutorialFormModalProps> = ({
             </button>
           </div>
         </form>
+
+        {/* Step Image Attachment Modal */}
+        {stepImageModal && (
+          <div 
+            className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+            onClick={() => !stepImageModal.isUploading && setStepImageModal(null)}
+          >
+            <div 
+              className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-neutral-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 flex items-center justify-center">
+                    <ImageIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                      Anexar Imagem ao Passo {stepImageModal.stepIndex + 1}
+                    </h3>
+                    <p className="text-[11px] text-neutral-500">
+                      Insira prints de telas, diagramas ou fotos explicativas
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !stepImageModal.isUploading && setStepImageModal(null)}
+                  className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+                {/* Toggle Mode: Upload vs URL */}
+                <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setStepImageModal(prev => prev ? { ...prev, mode: 'upload', error: null } : null)}
+                    className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                      stepImageModal.mode === 'upload'
+                        ? 'bg-white dark:bg-neutral-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
+                    }`}
+                  >
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Upload do Computador</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStepImageModal(prev => prev ? { ...prev, mode: 'url', error: null } : null)}
+                    className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                      stepImageModal.mode === 'url'
+                        ? 'bg-white dark:bg-neutral-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
+                    }`}
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    <span>Link / URL da Imagem</span>
+                  </button>
+                </div>
+
+                {/* Mode Upload */}
+                {stepImageModal.mode === 'upload' ? (
+                  <div className="space-y-3">
+                    <input
+                      ref={stepImageInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={handleStepImageFileUpload}
+                      className="hidden"
+                    />
+                    <div
+                      onClick={() => !stepImageModal.isUploading && stepImageInputRef.current?.click()}
+                      className="border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-orange-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-neutral-50/50 dark:bg-neutral-800/30"
+                    >
+                      {stepImageModal.isUploading ? (
+                        <div className="flex flex-col items-center gap-2 py-2">
+                          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                          <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                            Enviando imagem ({stepImageModal.uploadProgress}%)...
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-600 flex items-center justify-center mb-2">
+                            <UploadCloud className="w-5 h-5" />
+                          </div>
+                          <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                            Clique para selecionar imagem do computador
+                          </p>
+                          <p className="text-[11px] text-neutral-400 mt-0.5">
+                            Formatos suportados: PNG, JPG, JPEG, WEBP, GIF (máx. 20MB)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Mode URL */
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                      URL da Imagem
+                    </label>
+                    <input
+                      type="url"
+                      value={stepImageModal.url}
+                      onChange={e => setStepImageModal(prev => prev ? { ...prev, url: e.target.value } : null)}
+                      placeholder="https://exemplo.com/imagem.png"
+                      className="w-full px-3 py-2 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+                )}
+
+                {/* Error message */}
+                {stepImageModal.error && (
+                  <p className="text-xs text-red-500 bg-red-50 dark:bg-red-950/50 p-2.5 rounded-xl border border-red-200 dark:border-red-900">
+                    {stepImageModal.error}
+                  </p>
+                )}
+
+                {/* Image Preview if URL loaded */}
+                {stepImageModal.url && (
+                  <div className="space-y-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 max-h-48 flex items-center justify-center p-2">
+                      <img
+                        src={stepImageModal.url}
+                        alt={stepImageModal.caption || 'Prévia'}
+                        className="max-h-44 w-auto object-contain rounded-lg"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+
+                    {/* Caption Input */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                        Legenda / Texto alternativo (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={stepImageModal.caption}
+                        onChange={e => setStepImageModal(prev => prev ? { ...prev, caption: e.target.value } : null)}
+                        placeholder="Ex: Print da tela de confirmação do pedido"
+                        className="w-full px-3 py-2 text-xs bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-2 bg-neutral-50/50 dark:bg-neutral-900/50">
+                <button
+                  type="button"
+                  onClick={() => setStepImageModal(null)}
+                  disabled={stepImageModal.isUploading}
+                  className="px-4 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyStepImage}
+                  disabled={!stepImageModal.url || stepImageModal.isUploading}
+                  className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Inserir Imagem no Passo</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
